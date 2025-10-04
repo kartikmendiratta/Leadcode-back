@@ -25,7 +25,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'], // Allow both Vite default ports
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://leadcode-front.vercel.app', 'https://leadcode-front-kartikmendiratta.vercel.app'] // Add your actual Vercel domain
+    : ['http://localhost:5173', 'http://localhost:5174'], // Allow both Vite default ports
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -127,8 +129,15 @@ process.on('SIGINT', async () => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 API Base URL: http://localhost:${PORT}`);
-});
+
+// For Vercel serverless functions, export the app instead of listening
+export default app;
+
+// For local development, keep the listen call
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 API Base URL: http://localhost:${PORT}`);
+  });
+}
