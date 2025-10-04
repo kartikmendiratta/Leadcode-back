@@ -33,13 +33,18 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// MongoDB connection
+// MongoDB connection with serverless support
 const connectDB = async () => {
   try {
     if (!process.env.MONGODB_URI) {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
-    
+
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+      return; // Already connected
+    }
+
     console.log('🔗 Attempting to connect to MongoDB...');
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -48,13 +53,25 @@ const connectDB = async () => {
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('🚨 Database connection error:', error.message);
-    console.error('💡 Check your .env file and MongoDB connection string');
-    process.exit(1);
+    console.error('💡 Check your Vercel environment variables and MongoDB connection string');
+    throw error; // Re-throw to handle in calling function
   }
 };
 
-// Connect to database
-connectDB();
+// Middleware to ensure DB connection for each request
+const ensureDBConnection = async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection middleware error:', error);
+    // Continue without failing the request, but log the error
+    next();
+  }
+};
+
+// Apply DB connection middleware to all routes
+app.use(ensureDBConnection);
 
 // Routes
 app.use('/api/users', userRoutes);
